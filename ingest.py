@@ -62,7 +62,7 @@ SUPPORTED_EXTS = {".html", ".htm", ".txt", ".md", ".json", ".pdf"}
 # Engage org/event API pulls) are chunked one-record-per-chunk instead of being
 # packed to 150-200 tokens — so each org/event embeds as its own vector and a
 # specific query (e.g. "photography club") matches it precisely.
-_RECORD_SOURCES = ("campuslabs.com/engage",)
+_RECORD_SOURCES = ("campuslabs.com/engage", "eventbrite.com")
 
 # HTML tags that imply a line/paragraph break when stripped to plain text.
 _BLOCK_TAGS = {

@@ -11,7 +11,7 @@
 
 <!-- What domain did you choose? Why is this knowledge valuable and hard to find through official channels? -->
 
---- I chose Student Engagement & Events as my domain because as a college student at Georgia Tech, I sometimes find myself looking for something new to do on campus or in the city. The idea behind this AI is to help bridge that gap and provide unique and various engagement opportunities. The hardest part about finding this information is the way a lot of the sources are formatted, many with multiple links or shhort explanations.
+--- I chose Student Engagement & Events as my domain because as a college student at Georgia Tech, I sometimes find myself looking for something new to do on campus or in the city. The idea behind this AI is to help bridge that gap and provide unique and various engagement opportunities. The hardest part about finding this information is the way a lot of the sources are formatted, many with multiple links or short explanations.
 
 ## Documents
 
@@ -30,6 +30,7 @@
 | 8 | Center for Student Engagement | Official hub on how to get involved — org registration, campus traditions, leadership programs, and engagement resources. | https://studentengagement.gatech.edu/ |
 | 9 | Ramblin' Wreck Athletics | Game-day events and student spirit — football/basketball schedules, student tickets, and traditions. | https://ramblinwreck.com/ |
 | 10 | Discover Atlanta — Events | Off-campus leisure for students leaving campus — Midtown/Atlanta concerts, festivals, food, and free things to do. | https://discoveratlanta.com/events/all/ |
+| 11 | Eventbrite — Atlanta Events | Ticketed and free events in the Atlanta area (concerts, workshops, networking, community events) not always listed on official GT pages. | https://www.eventbrite.com/d/ga--atlanta/events/ |
 
 ---
 
@@ -56,11 +57,11 @@
      would you weigh in choosing a different embedding model — context length, multilingual
      support, accuracy on domain-specific text, latency? -->
 
-**Embedding model:** Semantic
+**Embedding model:** `all-MiniLM-L6-v2` via `sentence-transformers` (local CPU, no API key required)
 
 **Top-k:** 5
 
-**Production tradeoff reflection:** Tradeoffs that I would consider would be language support and event specifics. Since this AI has access to the links, I would leave most of the inspection to lie in the users hands by allowing them to click on the link and find any specifics that the AI can't answwer on their own
+**Production tradeoff reflection:** Tradeoffs that I would consider would be language support and event specifics. Since this AI has access to the links, I would leave most of the inspection to lie in the users hands by allowing them to click on the link and find any specifics that the AI can't answer on their own
 
 ---
 
@@ -73,7 +74,7 @@
 
 | # | Question | Expected answer |
 |---|----------|-----------------|
-| 1 | What upcoming events are their on campus or in the city that can help enhance my resume | There is a AI hackathon taking place in three days 6/10 on campus at the campus rec center. Here is the link for signup [Expected Link]|
+| 1 | What upcoming events are there on campus or in the city that can help enhance my resume? | There is an AI hackathon taking place in three days 6/10 on campus at the campus rec center. Here is the link for signup [Expected Link]|
 | 2 | I finished class around 1:00pm today and don't have anything else planned for the rest of the day. What is going on on campus today that I could attend?| Today Georgia Tech is hosting their weekly market on Tech Green from 12-5 and there is a basketball tournament being held at the Campus Rec Center starting at 6pm|
 | 3 | I'm new to campus and want to meet people who are into photography. Are there any student organizations at Georgia Tech I could join? | Yes, Georgia Tech has a Photography Club registered on Engage. The AI should name the org, mention how to view its meetings, and point me to the org page to contact a leader. [Expected Link] |
 | 4 | I want to stay active but don't like working out alone. What group fitness or intramural options does the Campus Rec Center have? | The CRC offers 20+ group fitness classes (e.g. cycling, yoga, martial arts) that require a group fitness membership, plus intramural sports for men's, women's, and co-rec teams that you sign up for through IMLeagues. [Expected Link] |
@@ -87,9 +88,9 @@
      Consider: noisy or inconsistent documents, missing source attribution, off-topic
      retrieval, chunks that split key information across boundaries. -->
 
-1. Events that get postponed or cancelled due to weather or unforseen reasons may have trouble being recognized and explaned to the user.
+1. Events that get postponed or cancelled due to weather or unforeseen reasons may have trouble being recognized and explained to the user.
 
-2. The way some of these links are formatte dcould cause chunking issues due to the way the texts are formatted in different tabs and sometimes different links.
+2. The way some of these links are formatted could cause chunking issues due to the way the texts are formatted in different tabs and sometimes different links.
 
 ---
 
@@ -181,10 +182,13 @@
 
 ### Chunking
 - **Directory-style sources (the Engage org/event pulls) are chunked one record per chunk** instead of packed to 150–200 tokens (`chunk_records()` in `ingest.py`, triggered for `campuslabs.com/engage` sources). Packing ~3 orgs per chunk diluted the signal so much that "Photography @ GT" never surfaced; one-record-per-chunk made it the **#1 hit (0.62)** for the verbatim Q3. Trade-off: these records are intentionally below the 150-token target, so the "% within 150–200" stat drops — precision matters more than size for a lookup directory. Prose pages (CRC, SCPC, Discover Atlanta, …) still use the original 150–200 / 50-overlap `chunk_text()`.
-- **Total chunks: 1,028** across 10 usable documents (within the healthy 50–2,000 band). Largest sources: Engage orgs 731, Discover Atlanta 175, Engage events 105.
+- **Total chunks: 1,060** across 11 usable documents (within the healthy 50–2,000 band). Largest sources: Engage orgs 731, Discover Atlanta 175, Engage events 105, Eventbrite 32.
 
 ### Retrieval
 - `retrieve(query, k=5)` now over-fetches `k×4` candidates and re-ranks with **Maximal Marginal Relevance** (`mmr_lambda=0.8`, relevance-favoring) to suppress near-duplicate / "magnetic" overview chunks, plus an optional **`min_score`** floor so generation (M5) can refuse low-relevance matches instead of being fed noise. Also removed the orgs/events directory **header lines**, which were forming a chunk that matched every "student organizations" query.
 - **Chunk metadata** stored for attribution: `source` (URL) and `position` (index within the document), per the M4 requirement.
 - After these changes the 5 eval queries retrieve sensibly: Q1→resume workshops, Q2→real upcoming events, Q3→Photography @ GT (#1), Q4→CRC programs (#1), Q5→Discover Atlanta / Piedmont Park (#1). Remaining soft spot: broad campus-life org descriptions still occasionally rank above a more specific page (e.g. a couple of club orgs above CRC's fitness detail on Q4) — a k/threshold tuning question for after M5.
+
+### Sources (M6 addition)
+- **Added Eventbrite — Atlanta Events** (`https://www.eventbrite.com/d/ga--atlanta/events/`) as source #11. Rationale: Discover Atlanta covers broad city events but Eventbrite surfaces ticketed and free community events (workshops, networking nights, concerts) that often go unlisted on official GT or city tourism pages — particularly relevant for Q1-style resume-building queries. Added to the Documents table above and to `sources.json`; fetched and re-indexed into `chunks.json`.
 
