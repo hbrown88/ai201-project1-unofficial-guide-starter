@@ -72,6 +72,8 @@ SOURCES: list[tuple[str, str]] = [
     ("ramblin_wreck", "https://ramblinwreck.com/"),
     # 10 Discover Atlanta events
     ("discover_atlanta_events", "https://discoveratlanta.com/events/all/"),
+    # 11 Eventbrite — Atlanta area events (ticketed + free)
+    ("eventbrite_atlanta", "https://www.eventbrite.com/d/ga--atlanta/events/"),
 ]
 
 # A real-ish User-Agent; many sites reject the default Python urllib agent.
@@ -251,10 +253,67 @@ def fetch_engage_events(timeout: int, retries: int) -> tuple[str, str]:
     return "\n".join(lines), ".txt"
 
 
+def fetch_eventbrite_events(timeout: int, retries: int) -> tuple[str, str]:
+    """Pull Atlanta events from Eventbrite via the schema.org ld+json block.
+
+    Eventbrite embeds a machine-readable ItemList in every listing page; parsing
+    it is more reliable than scraping rendered HTML and captures name, date,
+    location, description, and the direct ticket/RSVP URL for each event.
+    """
+    raw, _, _ = fetch(
+        "https://www.eventbrite.com/d/ga--atlanta/events/", timeout, retries
+    )
+    ld_blocks = re.findall(
+        r'<script type="application/ld\+json">(.*?)</script>', raw, re.DOTALL
+    )
+    items: list[dict] = []
+    for block in ld_blocks:
+        try:
+            data = json.loads(block)
+            if data.get("@context") == "https://schema.org" and "itemListElement" in data:
+                items = data["itemListElement"]
+                break
+        except (json.JSONDecodeError, AttributeError):
+            continue
+
+    lines: list[str] = []
+    for entry in items:
+        e = entry.get("item", entry)
+        name = (e.get("name") or "").strip()
+        if not name:
+            continue
+        desc = (e.get("description") or "").strip()
+        start = (e.get("startDate") or "").strip()
+        end = (e.get("endDate") or "").strip()
+        url = (e.get("url") or "").strip()
+        loc = e.get("location", {})
+        place = (loc.get("name") or "").strip()
+        addr = loc.get("address", {})
+        city = (addr.get("addressLocality") or "").strip()
+        region = (addr.get("addressRegion") or "").strip()
+        street = (addr.get("streetAddress") or "").strip()
+
+        block_parts = [name]
+        if start:
+            date_str = f"Date: {start}" + (f" to {end}" if end and end != start else "")
+            block_parts.append(date_str)
+        location_parts = [p for p in [place, street, city, region] if p]
+        if location_parts:
+            block_parts.append(f"Location: {', '.join(location_parts)}")
+        if desc:
+            block_parts.append(desc)
+        if url:
+            block_parts.append(f"More info: {url}")
+        lines.append("\n".join(block_parts))
+        lines.append("")
+    return "\n".join(lines), ".txt"
+
+
 # Sources whose name maps to a custom fetcher instead of a plain GET.
 FETCHERS = {
     "gt_engage_orgs": fetch_engage_orgs,
     "gt_engage_events": fetch_engage_events,
+    "eventbrite_atlanta": fetch_eventbrite_events,
 }
 
 
