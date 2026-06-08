@@ -52,7 +52,7 @@
 
 **Why these choices fit your documents:**
 
-**Final chunk count:**
+**Final chunk count:** 193 chunks (across 8 usable documents; 97% fall within the 150–200 token target). Of the 12 sources scraped, 4 produced no server-side text — r/gatech (HTTP 403), GT Engage orgs + events and the campus calendar (JavaScript-rendered shells) — so they contributed no chunks.
 
 ---
 

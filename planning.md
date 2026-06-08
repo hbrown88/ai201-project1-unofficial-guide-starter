@@ -159,3 +159,32 @@
 - *What I'll give it:* The generation stage of the **Architecture** diagram (Groq / Llama-3 via the `groq` client, key from `.env`), the retrieved chunks from Milestone 4, my 5 **Evaluation Plan** questions and their expected answers, and the requirement that answers must stay grounded in retrieved context and cite the source link.
 - *What I expect it to produce:* A `generate_answer(query, chunks)` function that builds a prompt injecting the retrieved chunks as context, with a system instruction to answer only from that context, say "I don't have that information" when the context doesn't cover it, and include the relevant source URL — plus a simple Gradio or Streamlit interface that takes a question and shows the answer with its sources.
 - *How I'll verify it:* Run all 5 evaluation questions end-to-end and compare responses to my expected answers, confirming each answer cites a real source link from the retrieved chunks. I'll also ask an out-of-domain question to confirm it refuses rather than hallucinating, and sanity-check that postponed/cancelled-event wording (my first anticipated challenge) is handled honestly rather than invented.
+
+---
+
+## Changes during development
+
+<!-- Running log of where the implementation diverged from the original plan above, and why. -->
+
+### Pipeline as built
+- **`fetch_documents.py`** (scrape) → **`ingest.py`** (clean + chunk → `chunks.json`) → **`embed.py`** (embed + ChromaDB + `retrieve()`). The raw scrape is saved verbatim to `documents/raw/` first so cleaning/chunking is reproducible offline.
+- **Embedding model:** the plan said "Semantic"; the actual model is **`all-MiniLM-L6-v2`** via `sentence-transformers` (local, no API key), exactly as the diagram shows. Vectors are L2-normalized and stored in a **persistent ChromaDB** collection using **cosine** distance.
+
+### Fetching
+- **Recovered the JavaScript-rendered sources via their JSON APIs.** A plain GET of GT Engage (orgs + events) and the campus calendar returned empty SPA shells (~33 chars after cleaning). I added API-based fetchers that pull the Anthology/CampusLabs **discovery API** directly: **718 registered organizations** and **~76 upcoming events**, emitted as clean text with one block per org/event and each item's own deep link for attribution. This was the single biggest quality win — it is what makes the "photography org" and "upcoming events" questions answerable at all.
+- **Bug fixed — stale events.** My first events pull returned 307 events *all dated 2016*: the `endsAfter` timestamp was formatted as `...+00:00`, and the `+` decoded to a space in the URL, silently voiding the filter. Fixed by using a `Z` suffix, URL-quoting the value, and adding a Python-side "ends after now" filter as backup. Result: only genuinely upcoming events (2026–2027).
+- **`sources.json` is now merged, not overwritten,** so a source that is temporarily unreachable on a re-run (e.g. Discover Atlanta intermittently returns 403) keeps the attribution from its previously-saved file.
+- **Still blocked (documented, not fixed):** r/gatech returns HTTP 403 to all automated requests (Reddit is OAuth-only now), and the campus calendar's Localist API path 404s. Both contribute no chunks; recover by browser "Save As" if needed.
+
+### Cleaning
+- Upgraded HTML cleaning from tag-stripping to **subtree removal** (drop `<nav>`/`<footer>`/`<aside>`/forms/scripts, ARIA landmark roles, and class/id chrome like cookie/share/sidebar/comments), a **line-level filter** (UI labels, social handles, "Read more", cookie notices), and **cross-document boilerplate removal** (lines repeated across ≥ half the pages = shared GT header/footer). Also normalized exotic/zero-width whitespace (`\xa0`, `​`). Guardrail learned the hard way: never apply class heuristics to `body`/`html`/`main`/`article` — WordPress layout classes there (`has-sidebar`, an `ad` token) were nuking whole pages.
+
+### Chunking
+- **Directory-style sources (the Engage org/event pulls) are chunked one record per chunk** instead of packed to 150–200 tokens (`chunk_records()` in `ingest.py`, triggered for `campuslabs.com/engage` sources). Packing ~3 orgs per chunk diluted the signal so much that "Photography @ GT" never surfaced; one-record-per-chunk made it the **#1 hit (0.62)** for the verbatim Q3. Trade-off: these records are intentionally below the 150-token target, so the "% within 150–200" stat drops — precision matters more than size for a lookup directory. Prose pages (CRC, SCPC, Discover Atlanta, …) still use the original 150–200 / 50-overlap `chunk_text()`.
+- **Total chunks: 1,028** across 10 usable documents (within the healthy 50–2,000 band). Largest sources: Engage orgs 731, Discover Atlanta 175, Engage events 105.
+
+### Retrieval
+- `retrieve(query, k=5)` now over-fetches `k×4` candidates and re-ranks with **Maximal Marginal Relevance** (`mmr_lambda=0.8`, relevance-favoring) to suppress near-duplicate / "magnetic" overview chunks, plus an optional **`min_score`** floor so generation (M5) can refuse low-relevance matches instead of being fed noise. Also removed the orgs/events directory **header lines**, which were forming a chunk that matched every "student organizations" query.
+- **Chunk metadata** stored for attribution: `source` (URL) and `position` (index within the document), per the M4 requirement.
+- After these changes the 5 eval queries retrieve sensibly: Q1→resume workshops, Q2→real upcoming events, Q3→Photography @ GT (#1), Q4→CRC programs (#1), Q5→Discover Atlanta / Piedmont Park (#1). Remaining soft spot: broad campus-life org descriptions still occasionally rank above a more specific page (e.g. a couple of club orgs above CRC's fitness detail on Q4) — a k/threshold tuning question for after M5.
+

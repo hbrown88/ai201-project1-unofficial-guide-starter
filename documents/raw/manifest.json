@@ -1,0 +1,116 @@
+[
+  {
+    "name": "reddit_gatech",
+    "url": "https://www.reddit.com/r/gatech/.json?limit=75",
+    "fetched_at": "2026-06-08T04:14:14+00:00",
+    "ok": false,
+    "error": "HTTP 403 Blocked"
+  },
+  {
+    "name": "gt_engage_orgs",
+    "url": "https://gatech.campuslabs.com/engage/organizations",
+    "fetched_at": "2026-06-08T04:14:15+00:00",
+    "ok": true,
+    "file": "02_gt_engage_orgs.txt",
+    "status": 200,
+    "content_type": "application/json (api)",
+    "bytes": 251089
+  },
+  {
+    "name": "gt_engage_events",
+    "url": "https://gatech.campuslabs.com/engage/events",
+    "fetched_at": "2026-06-08T04:14:17+00:00",
+    "ok": true,
+    "file": "03_gt_engage_events.txt",
+    "status": 200,
+    "content_type": "application/json (api)",
+    "bytes": 59686
+  },
+  {
+    "name": "gt_campus_calendar",
+    "url": "https://calendar.gatech.edu/event/listings",
+    "fetched_at": "2026-06-08T04:14:18+00:00",
+    "ok": true,
+    "file": "04_gt_campus_calendar.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 93937
+  },
+  {
+    "name": "scpc",
+    "url": "https://studentcenter.gatech.edu/scpc",
+    "fetched_at": "2026-06-08T04:14:19+00:00",
+    "ok": true,
+    "file": "05_scpc.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 53110
+  },
+  {
+    "name": "crc_programs",
+    "url": "https://crc.gatech.edu/programs/",
+    "fetched_at": "2026-06-08T04:14:21+00:00",
+    "ok": true,
+    "file": "06_crc_programs.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 181067
+  },
+  {
+    "name": "career_workshops",
+    "url": "https://career.gatech.edu/workshops/",
+    "fetched_at": "2026-06-08T04:14:22+00:00",
+    "ok": true,
+    "file": "07_career_workshops.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 116434
+  },
+  {
+    "name": "career_fair",
+    "url": "https://careerfair.gatech.edu/",
+    "fetched_at": "2026-06-08T04:14:23+00:00",
+    "ok": true,
+    "file": "08_career_fair.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 59590
+  },
+  {
+    "name": "gt_arts_events",
+    "url": "https://arts.gatech.edu/events",
+    "fetched_at": "2026-06-08T04:14:24+00:00",
+    "ok": true,
+    "file": "09_gt_arts_events.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 63282
+  },
+  {
+    "name": "student_engagement",
+    "url": "https://studentengagement.gatech.edu/",
+    "fetched_at": "2026-06-08T04:14:25+00:00",
+    "ok": true,
+    "file": "10_student_engagement.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 46052
+  },
+  {
+    "name": "ramblin_wreck",
+    "url": "https://ramblinwreck.com/",
+    "fetched_at": "2026-06-08T04:14:26+00:00",
+    "ok": true,
+    "file": "11_ramblin_wreck.html",
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 94579
+  },
+  {
+    "name": "discover_atlanta_events",
+    "url": "https://discoveratlanta.com/events/all/",
+    "fetched_at": "2026-06-08T04:14:27+00:00",
+    "ok": false,
+    "error": "HTTP 403 Forbidden"
+  }
+]
